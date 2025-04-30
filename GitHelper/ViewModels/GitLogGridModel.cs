@@ -1,50 +1,19 @@
-﻿using GitHelper.Git;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using GitHelper.Git;
 
 namespace GitHelper.ViewModels
 {
-    public class GitLogGridModel(GitLogModel gitLog) : INotifyPropertyChanged
+    public partial class GitLogGridModel(GitLogModel gitLog) : ObservableObject
     {
+        [ObservableProperty]
         private bool _isChecked;
-
-        public bool IsChecked
-        {
-            get => _isChecked;
-            set
-            {
-                if (_isChecked != value)
-                {
-                    _isChecked = value;
-                    OnPropertyChanged(nameof(IsChecked));
-                }
-            }
-        }
 
         public string? JiraNo { get; set; }
 
         public GitLogModel GitLog { get; init; } = gitLog;
 
+        [ObservableProperty]
         private CherryPickStatus _status;
 
-        public CherryPickStatus Status
-        {
-            get => _status;
-            set
-            {
-                if (_status != value)
-                {
-                    _status = value;
-                    OnPropertyChanged(nameof(Status));
-                }
-            }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
     }
 }

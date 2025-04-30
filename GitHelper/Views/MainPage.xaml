@@ -14,118 +14,185 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-
-        <StackPanel
-            Grid.Row="0"
-            Margin="0,5"
-            Orientation="Horizontal">
-            <TextBlock Margin="5,0" FontSize="10">Repo:</TextBlock>
+        <!-- Top Information: Repo and Current Branch -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <TextBlock
-                FontSize="10"
-                Foreground="Red"
+                Grid.Column="0"
+                Margin="5,0"
+                FontSize="12">
+                Repo:
+            </TextBlock>
+            <TextBlock
+                Grid.Column="1"
+                FontSize="12"
+                Foreground="DarkRed"
                 Text="{Binding RepoPath, UpdateSourceTrigger=PropertyChanged}" />
-
-            <TextBlock Margin="5,0" FontSize="10">Current Branch:</TextBlock>
             <TextBlock
-                FontSize="10"
-                Foreground="Red"
+                Grid.Column="2"
+                Margin="5,0"
+                FontSize="12">
+                Current Branch:
+            </TextBlock>
+            <TextBlock
+                Grid.Column="3"
+                FontSize="12"
+                Foreground="DarkRed"
                 Text="{Binding CurrentBranch, UpdateSourceTrigger=PropertyChanged}" />
-        </StackPanel>
-
-        <StackPanel Grid.Row="1" Orientation="Horizontal">
+        </Grid>
+        <!-- Action Area: Operation Buttons -->
+        <WrapPanel Grid.Row="1" Orientation="Horizontal">
             <Button
-                Width="75"
+                Width="100"
+                Height="30"
+                Margin="5,0"
                 Command="{Binding GoBackCommand}"
                 Content="GoBack" />
+            <TextBox
+                Width="200"
+                Height="30"
+                Margin="5,0,0,0"
+                BorderBrush="Gray"
+                BorderThickness="1"
+                metro:TextBoxHelper.Watermark="Enter the target branch..."
+                Text="{Binding TargetBranch, UpdateSourceTrigger=PropertyChanged}" />
             <Button
-                Width="75"
-                Margin="10,0,0,0"
-                Command="{Binding CheckAllCommand}"
-                Content="CheckAll" />
-
-            <Button
-                Width="75"
-                Margin="10,0,0,0"
+                Width="100"
+                Height="30"
+                Margin="0,0,5,0"
                 Command="{Binding CheckoutCommand}"
                 Content="Checkout" />
-            <TextBox Width="50" Text="{Binding TargetBranch, UpdateSourceTrigger=PropertyChanged}" />
-
             <Button
-                Width="75"
-                Margin="10,0,0,0"
+                Width="100"
+                Height="30"
+                Margin="5"
                 Command="{Binding CherryPickCommand}"
                 Content="CherryPick" />
+        </WrapPanel>
 
+        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5">
+            <TextBlock
+                Margin="8,0,0,0"
+                VerticalAlignment="Center"
+                Text="Jira No:" />
             <metro:DropDownButton
-                Margin="10,0,0,0"
-                Width="75"
-                Content="{Binding SelectedJiraNo, UpdateSourceTrigger=PropertyChanged}"
+                Width="362"
+                Height="Auto"
+                Margin="5,0"
                 ItemsSource="{Binding JiraNos}">
-                <metro:DropDownButton.ItemContainerStyle>
-                    <Style BasedOn="{StaticResource {x:Type MenuItem}}" TargetType="{x:Type MenuItem}">
-                        <Setter Property="Command" Value="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type metro:DropDownButton}}, Path=DataContext.SelectJiraNoCommand}" />
-                        <Setter Property="CommandParameter" Value="{Binding}" />
-                    </Style>
-                </metro:DropDownButton.ItemContainerStyle>
+                <metro:DropDownButton.Content>
+                    <TextBlock
+                        FontSize="10"
+                        Foreground="Black"
+                        Width="300"
+                        Height="Auto"
+                        TextWrapping="Wrap"
+                        Text="{Binding SelectedJiraNosText}" />
+                </metro:DropDownButton.Content>
+                <metro:DropDownButton.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox
+                                Command="{Binding CheckJiraNoCommand}"
+                                CommandParameter="{Binding}"
+                                Content="{Binding JiraNo}"
+                                IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </metro:DropDownButton.ItemTemplate>
             </metro:DropDownButton>
 
+            <TextBox
+                Width="153"
+                Height="30"
+                Margin="5,0,0,0"
+                BorderBrush="Gray"
+                BorderThickness="1"
+                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                metro:TextBoxHelper.Watermark="Enter the commit msg..."/>
             <Button
-                Width="75"
-                Margin="10,0,0,0"
+                Width="100"
+                Height="30"
+                Margin="0,0,5,0"
                 Command="{Binding SearchCommand}"
                 Content="Search" />
-            <TextBox Width="100" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-        </StackPanel>
 
-        <DataGrid
-            x:Name="dataGrid"
-            Grid.Row="2"
+        </WrapPanel>
+
+        <!-- Data Grid: Displaying Git Logs -->
+        <ScrollViewer
+            Grid.Row="3"
             Margin="0,10,0,0"
-            AutoGenerateColumns="False"
-            ItemsSource="{Binding DisplayedLogs}">
-            <DataGrid.Columns>
-                <DataGridTemplateColumn>
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged}" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+            HorizontalScrollBarVisibility="Auto"
+            VerticalScrollBarVisibility="Auto">
+            <DataGrid
+                x:Name="dataGrid"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                AlternatingRowBackground="LightGray"
+                AutoGenerateColumns="False"
+                ItemsSource="{Binding DisplayedLogs}"
+                RowHeight="25">
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Width="50" MinWidth="100">
 
-                <DataGridTextColumn
-                    Width="auto"
-                    Binding="{Binding GitLog.Hash}"
-                    Header="Hash" />
+                        <!-- header checkbox -->
+                        <DataGridTemplateColumn.Header>
+                            <CheckBox
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Checked="SelectAll_CheckBox_Checked"
+                                Content="CHECKED"
+                                Unchecked="SelectAll_CheckBox_Unchecked" />
+                        </DataGridTemplateColumn.Header>
 
-                <DataGridTextColumn
-                    Width="auto"
-                    Binding="{Binding GitLog.Author}"
-                    Header="Author" />
-
-                <DataGridTextColumn
-                    Width="auto"
-                    Binding="{Binding GitLog.CommitDate}"
-                    Header="Date" />
-
-                <DataGridTextColumn
-                    Width="auto"
-                    Binding="{Binding GitLog.Description}"
-                    Header="Description" />
-
-                <DataGridTextColumn
-                    Width="auto"
-                    Binding="{Binding JiraNo}"
-                    Header="Jira No" />
-
-                <DataGridTextColumn
-                    Width="auto"
-                    Binding="{Binding Status}"
-                    Header="Status" />
-
-            </DataGrid.Columns>
-        </DataGrid>
+                        <!-- datagrid checkbox -->
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn
+                        Width="Auto"
+                        MinWidth="150"
+                        Binding="{Binding GitLog.Hash}"
+                        Header="Hash" />
+                    <DataGridTextColumn
+                        Width="Auto"
+                        MinWidth="150"
+                        Binding="{Binding GitLog.Author}"
+                        Header="Author" />
+                    <DataGridTextColumn
+                        Width="Auto"
+                        MinWidth="150"
+                        Binding="{Binding GitLog.CommitDate}"
+                        Header="Date" />
+                    <DataGridTextColumn
+                        Width="Auto"
+                        MinWidth="200"
+                        Binding="{Binding GitLog.Description}"
+                        Header="Description" />
+                    <DataGridTextColumn
+                        Width="Auto"
+                        MinWidth="100"
+                        Binding="{Binding JiraNo}"
+                        Header="Jira No" />
+                    <DataGridTextColumn
+                        Width="Auto"
+                        MinWidth="150"
+                        Binding="{Binding Status}"
+                        Header="Status" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </ScrollViewer>
     </Grid>
-
 </Page>

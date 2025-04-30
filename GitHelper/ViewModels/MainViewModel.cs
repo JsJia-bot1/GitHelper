@@ -21,7 +21,7 @@ namespace GitHelper.ViewModels
         private ObservableCollection<GitLogGridModel> _displayedLogs = [];
 
         [ObservableProperty]
-        private ObservableCollection<string> _jiraNos = [];
+        private ObservableCollection<JiraNoComboBoxModel> _jiraNos = [];
 
         [ObservableProperty]
         private string _repoPath = null!;
@@ -30,7 +30,7 @@ namespace GitHelper.ViewModels
         private string _currentBranch = null!;
 
         [ObservableProperty]
-        private string _selectedJiraNo = "Jira No";
+        private string? _selectedJiraNosText;
 
         [ObservableProperty]
         private string? _searchText;
@@ -38,11 +38,13 @@ namespace GitHelper.ViewModels
         [ObservableProperty]
         private string? _targetBranch;
 
+        private const string DROPDOWN_SELECTALL_TEXT = "Select All";
+
         public async Task Initialize(string repoPath, string? fixVersion = null)
         {
             Task<IReadOnlyCollection<JiraTicketModel>> jiraTask = InitializeJira(fixVersion);
 
-            Task<IEnumerable<GitLogGridModel>> gitTask = Task.Run(() => InitializeGitRepo(repoPath));
+            Task<IEnumerable<GitLogGridModel>> gitTask = InitializeGitRepo(repoPath);
 
             await Task.WhenAll(gitTask, jiraTask);
 
@@ -53,16 +55,16 @@ namespace GitHelper.ViewModels
             FilterLogsByJiraNoAndRender(logs, tickets);
         }
 
-        private IEnumerable<GitLogGridModel> InitializeGitRepo(string repoPath)
+        private async Task<IEnumerable<GitLogGridModel>> InitializeGitRepo(string repoPath)
         {
             RepoPath = repoPath;
 
             Git = new(repoPath);
-            Git.ValidateRepo();
-            Git.CheckoutOrAutoCreate("dev", "origin/dev");
-            Git.Pull("dev");
+            await Git.ValidateRepo();
+            await Git.CheckoutOrAutoCreate("dev", "origin/dev");
+            await Git.Pull("dev");
 
-            return Git.Logs("dev").Select(x => new GitLogGridModel(x));
+            return (await Git.Logs("dev")).Select(x => new GitLogGridModel(x));
         }
 
         private static async Task<IReadOnlyCollection<JiraTicketModel>> InitializeJira(string? fixVersion)
@@ -83,7 +85,7 @@ namespace GitHelper.ViewModels
             {
                 HashSet<string> jiraNos = [.. tickets.Select(x => x.Key)];
 
-                logs = logs.Where(log =>
+                logs = [.. logs.Where(log =>
                 {
                     string? jiraNo = jiraNos.FirstOrDefault(no => log.GitLog.Description.Contains(no));
 
@@ -94,12 +96,16 @@ namespace GitHelper.ViewModels
 
                     log.JiraNo = jiraNo;
                     return true;
-                });
+                })];
 
-                JiraNos = new(jiraNos);
+                JiraNos = new(jiraNos.Intersect(logs.Select(x => x.JiraNo))
+                                     .OrderBy(x => x)
+                                     .Select(x => new JiraNoComboBoxModel(x!, CheckJiraNoCommand)));
+
+                JiraNos.Insert(0, new JiraNoComboBoxModel(DROPDOWN_SELECTALL_TEXT, CheckJiraNoCommand));
             }
 
-            _logs = [.. logs];
+            _logs = logs;
             DisplayedLogs = new(_logs);
             CurrentBranch = "dev";
         }
@@ -111,13 +117,31 @@ namespace GitHelper.ViewModels
         }
 
         [RelayCommand]
-        private void CheckAll()
+        private void CheckAll(bool isChecked)
         {
-            bool hasAllChecked = DisplayedLogs.All(item => item.IsChecked);
             foreach (var item in DisplayedLogs)
             {
-                item.IsChecked = !hasAllChecked;
+                item.IsChecked = isChecked;
             }
+        }
+
+        [RelayCommand]
+        private void CheckJiraNo(JiraNoComboBoxModel model)
+        {
+            // Handle check all
+            if (model.JiraNo == DROPDOWN_SELECTALL_TEXT)
+            {
+                foreach (var item in JiraNos.Skip(1))
+                {
+                    item.IsChecked = model.IsChecked;
+                }
+
+                SelectedJiraNosText = model.IsChecked ? string.Join(", ", JiraNos.Skip(1).Select(x => x.JiraNo))
+                                                      : string.Empty;
+                return;
+            }
+
+            SelectedJiraNosText = string.Join(", ", JiraNos.Skip(1).Where(x => x.IsChecked).Select(x => x.JiraNo));
         }
 
         [RelayCommand]
@@ -130,31 +154,36 @@ namespace GitHelper.ViewModels
         [RelayCommand]
         private void Search()
         {
-            if (string.IsNullOrWhiteSpace(SearchText))
+            var checkedJiraNos = JiraNos.Where(x => x.IsChecked).Select(x => x.JiraNo);
+
+            if (string.IsNullOrWhiteSpace(SearchText) && !checkedJiraNos.Any())
             {
                 DisplayedLogs.UpdateAll(_logs);
                 return;
             }
 
-            DisplayedLogs.UpdateAll(_logs.Where(x => x.GitLog.Description.Contains(SearchText)
-                                                  || x.GitLog.Author.Contains(SearchText)));
+            IList<Func<GitLogGridModel, bool>>? filters = [];
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                filters.Add(x => x.GitLog.Description.Contains(SearchText) || x.GitLog.Author.Contains(SearchText));
+            }
+
+            if (checkedJiraNos.Any())
+            {
+                filters.Add(x => checkedJiraNos.Contains(x.JiraNo));
+            }
+
+            DisplayedLogs.UpdateAll(_logs.Where(x => filters.All(f => f.Invoke(x))));
         }
 
-        [RelayCommand]
-        private void SelectJiraNo(string jiraNo)
-        {
-            DisplayedLogs.UpdateAll(_logs.Where(x => x.JiraNo == jiraNo));
-
-            SelectedJiraNo = jiraNo;
-        }
 
         [RelayCommand]
-        private void Checkout()
+        private async Task Checkout()
         {
             ThrowHelper.ThrowHandledException(string.IsNullOrWhiteSpace(TargetBranch), "Please input the target branch.");
             Debug.Assert(TargetBranch != null);
 
-            bool autoCreate = Git.CheckoutOrAutoCreate(TargetBranch, "origin/main");
+            bool autoCreate = await Git.CheckoutOrAutoCreate(TargetBranch, "origin/main");
 
             MessageBoxHelper.ShowIfTrue(autoCreate, "The branch has been created automatically based on origin/main.");
 
@@ -162,7 +191,7 @@ namespace GitHelper.ViewModels
         }
 
         [RelayCommand]
-        private void CherryPick()
+        private async Task CherryPick()
         {
             ThrowHelper.ThrowHandledException(CurrentBranch == "dev", "Please checkout to new branch firstly.");
 
@@ -173,13 +202,15 @@ namespace GitHelper.ViewModels
 
             foreach (var item in checkedItems)
             {
-                CherryPick(item);
+                await CherryPick(item);
             }
+
+            MessageBox.Show($"Total {checkedItems.Count()} items have been cherry-picked successfully.");
         }
 
-        private void CherryPick(GitLogGridModel log)
+        private async Task CherryPick(GitLogGridModel log)
         {
-            CherryPickStatus status = Git.CherryPick(log.GitLog.Hash);
+            CherryPickStatus status = await Git.CherryPick(log.GitLog.Hash);
 
             if (status != CherryPickStatus.Conflicting)
             {
@@ -187,24 +218,24 @@ namespace GitHelper.ViewModels
                 return;
             }
 
-            ResolveConflict(log);
+            await ResolveConflict(log);
 
             // Ensure no abort
-            if (!Git.Contains(log.GitLog.Description, CurrentBranch))
+            if (!await Git.Contains(log.GitLog.Description, CurrentBranch))
             {
-                CherryPick(log);
+                await CherryPick(log);
             }
 
             log.Status = CherryPickStatus.ConflictResolved;
         }
 
-        private void ResolveConflict(GitLogGridModel log)
+        private async Task ResolveConflict(GitLogGridModel log)
         {
             do
             {
                 MessageBox.Show($"The commit {log.GitLog.Description} occurs conflict, please resolve.");
             }
-            while (Git.HasUnresolvedConflict());
+            while (await Git.HasUnresolvedConflict());
         }
     }
 }
