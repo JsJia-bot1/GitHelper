@@ -13,7 +13,7 @@ namespace GitHelper.Git
         public string Author { get; init; } = null!;
 
         [GitFormat("%cd")]
-        public string CommitDate { get; init; } = null!;
+        public DateTime CommitDate { get; init; }
 
         [GitFormat("%s")]
         public string Description { get; init; } = null!;

@@ -73,12 +73,21 @@
             <Button
                 Width="100"
                 Height="30"
+                Margin="5,0"
+                Command="{Binding CompareCommand}"
+                Content="Compare" />
+            <Button
+                Width="100"
+                Height="30"
                 Margin="5"
                 Command="{Binding CherryPickCommand}"
                 Content="CherryPick" />
         </WrapPanel>
 
-        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5">
+        <WrapPanel
+            Grid.Row="2"
+            Margin="0,5"
+            Orientation="Horizontal">
             <TextBlock
                 Margin="8,0,0,0"
                 VerticalAlignment="Center"
@@ -90,12 +99,12 @@
                 ItemsSource="{Binding JiraNos}">
                 <metro:DropDownButton.Content>
                     <TextBlock
-                        FontSize="10"
-                        Foreground="Black"
                         Width="300"
                         Height="Auto"
-                        TextWrapping="Wrap"
-                        Text="{Binding SelectedJiraNosText}" />
+                        FontSize="10"
+                        Foreground="Black"
+                        Text="{Binding SelectedJiraNosText}"
+                        TextWrapping="Wrap" />
                 </metro:DropDownButton.Content>
                 <metro:DropDownButton.ItemTemplate>
                     <DataTemplate>
@@ -113,11 +122,11 @@
             <TextBox
                 Width="153"
                 Height="30"
-                Margin="5,0,0,0"
+                Margin="7,0,0,0"
                 BorderBrush="Gray"
                 BorderThickness="1"
-                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                metro:TextBoxHelper.Watermark="Enter the commit msg..."/>
+                metro:TextBoxHelper.Watermark="Enter the commit msg..."
+                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
             <Button
                 Width="100"
                 Height="30"

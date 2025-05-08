@@ -29,6 +29,8 @@ namespace GitHelper.ViewModels
         [ObservableProperty]
         private string _currentBranch = null!;
 
+        private string _configuredSourceBranch = null!;
+
         [ObservableProperty]
         private string? _selectedJiraNosText;
 
@@ -40,11 +42,11 @@ namespace GitHelper.ViewModels
 
         private const string DROPDOWN_SELECTALL_TEXT = "Select All";
 
-        public async Task Initialize(string repoPath, string? fixVersion = null)
+        public async Task Initialize(InitialConfigModel configModel)
         {
-            Task<IReadOnlyCollection<JiraTicketModel>> jiraTask = InitializeJira(fixVersion);
+            Task<IReadOnlyCollection<JiraTicketModel>> jiraTask = InitializeJira(configModel.FixVersion);
 
-            Task<IEnumerable<GitLogGridModel>> gitTask = InitializeGitRepo(repoPath);
+            Task<IEnumerable<GitLogGridModel>> gitTask = InitializeGitRepo(configModel.RepoPath!, configModel.SourceBranch);
 
             await Task.WhenAll(gitTask, jiraTask);
 
@@ -52,19 +54,23 @@ namespace GitHelper.ViewModels
 
             IReadOnlyCollection<JiraTicketModel> tickets = jiraTask.Result;
 
-            FilterLogsByJiraNoAndRender(logs, tickets);
+            FilterLogsByJiraNos(logs, tickets);
         }
 
-        private async Task<IEnumerable<GitLogGridModel>> InitializeGitRepo(string repoPath)
+        private async Task<IEnumerable<GitLogGridModel>> InitializeGitRepo(string repoPath, string sourceBranch)
         {
-            RepoPath = repoPath;
-
             Git = new(repoPath);
             await Git.ValidateRepo();
-            await Git.CheckoutOrAutoCreate("dev", "origin/dev");
-            await Git.Pull("dev");
+            await Git.CheckoutOrAutoCreate(sourceBranch, $"origin/{sourceBranch}");
+            await Git.Pull(sourceBranch);
 
-            return (await Git.Logs("dev")).Select(x => new GitLogGridModel(x));
+            var logs = (await Git.Logs(sourceBranch)).Select(x => new GitLogGridModel(x));
+
+            RepoPath = repoPath;
+            CurrentBranch = sourceBranch;
+            _configuredSourceBranch = sourceBranch;
+
+            return logs;
         }
 
         private static async Task<IReadOnlyCollection<JiraTicketModel>> InitializeJira(string? fixVersion)
@@ -78,8 +84,7 @@ namespace GitHelper.ViewModels
             return tickets;
         }
 
-        private void FilterLogsByJiraNoAndRender(IEnumerable<GitLogGridModel> logs,
-                                                 IReadOnlyCollection<JiraTicketModel> tickets)
+        private void FilterLogsByJiraNos(IEnumerable<GitLogGridModel> logs, IReadOnlyCollection<JiraTicketModel> tickets)
         {
             if (tickets.Count != 0)
             {
@@ -107,7 +112,6 @@ namespace GitHelper.ViewModels
 
             _logs = logs;
             DisplayedLogs = new(_logs);
-            CurrentBranch = "dev";
         }
 
         [RelayCommand]
@@ -148,6 +152,11 @@ namespace GitHelper.ViewModels
         private void Refresh()
         {
             SearchText = null;
+            foreach (var jiraNo in JiraNos)
+            {
+                jiraNo.IsChecked = false;
+            }
+            SelectedJiraNosText = null;
             DisplayedLogs.UpdateAll(_logs);
         }
 
@@ -191,13 +200,30 @@ namespace GitHelper.ViewModels
         }
 
         [RelayCommand]
+        private async Task Compare()
+        {
+            ThrowHelper.ThrowHandledException(CurrentBranch == _configuredSourceBranch,
+                                              "Please checkout to new branch firstly.");
+
+            await Parallel.ForEachAsync(DisplayedLogs, async (log, _) =>
+            {
+                bool contains = await Git.Contains(log.GitLog.Description, TargetBranch!);
+                if (contains)
+                {
+                    log.Status = CherryPickStatus.DescriptionFound;
+                }
+            });
+        }
+
+        [RelayCommand]
         private async Task CherryPick()
         {
-            ThrowHelper.ThrowHandledException(CurrentBranch == "dev", "Please checkout to new branch firstly.");
+            ThrowHelper.ThrowHandledException(CurrentBranch == _configuredSourceBranch,
+                                              "Please checkout to new branch firstly.");
 
             IEnumerable<GitLogGridModel> checkedItems = DisplayedLogs.Where(x => x.IsChecked
                                                                               && x.Status == CherryPickStatus.Ready)
-                                                                     .OrderBy(x => DateTime.Parse(x.GitLog.CommitDate));
+                                                                     .OrderBy(x => x.GitLog.CommitDate);
             ThrowHelper.ThrowHandledException(!checkedItems.Any(), "No any ready items are checked.");
 
             foreach (var item in checkedItems)

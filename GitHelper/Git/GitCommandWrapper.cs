@@ -71,7 +71,7 @@ namespace GitHelper.Git
 
         public async Task<IEnumerable<GitLogModel>> Logs(string branchName)
         {
-            string command = $@"log {branchName} --since=6.months --date=format:""%Y-%m-%d %H:%M:%S"" --pretty=format:""{GitLogModel.Formatter()},""";
+            string command = $@"log {branchName} --since=12.months --date=format-local:""%Y-%m-%d %H:%M:%S"" --pretty=format:""{GitLogModel.Formatter()},""";
             string sLogs = await Execute(command);
 
             sLogs = sLogs.Remove(sLogs.Length - 1);

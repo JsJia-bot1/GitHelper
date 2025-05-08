@@ -4,6 +4,7 @@
     {
         Ready,
         NoChange,
+        DescriptionFound,
         CherryPicked,
         Conflicting,
         ConflictResolved
