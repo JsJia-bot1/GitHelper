@@ -65,12 +65,15 @@ namespace GitHelper
 
         private void OnException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            if (e.Exception is not HandledException)
+            if (e.Exception is HandledException)
             {
-                throw e.Exception;
+                MessageBox.Show(e.Exception.Message);
+            }
+            else
+            {
+                MessageBox.Show($"Unhandled exception occurred: {e.Exception.Message} | {e.Exception.StackTrace}");
             }
 
-            MessageBox.Show(e.Exception.Message);
             e.Handled = true;
         }
 #pragma warning restore S2325 // Methods and properties that don't access instance data should be static

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Reflection;
-using System.Text;
+﻿using System.Reflection;
 
 namespace GitHelper.Git
 {
@@ -24,18 +22,13 @@ namespace GitHelper.Git
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.IsDefined(typeof(GitFormatAttribute)));
 
-            StringBuilder builder = new("{");
-
             var entries = properties.Select(p =>
             {
                 var attribute = p.GetCustomAttribute<GitFormatAttribute>()!;
-                return $"\"\"\"{p.Name}\"\"\":\"\\\"{attribute.Format}\\\"\"";
+                return $"\"\"\"x00{p.Name}\"\"\"x00:\"\\\"x00{attribute.Format}\\\"\"x00";
             });
 
-            builder.Append(string.Join(",", entries));
-            builder.Append('}');
-
-            return builder.ToString();
+            return $@"{{{string.Join(",", entries)}}}";
         }
     }
 }

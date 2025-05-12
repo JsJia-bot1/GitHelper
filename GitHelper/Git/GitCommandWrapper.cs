@@ -73,23 +73,11 @@ namespace GitHelper.Git
         {
             string command = $@"log {branchName} --since=12.months --date=format-local:""%Y-%m-%d %H:%M:%S"" --pretty=format:""{GitLogModel.Formatter()},""";
             string sLogs = await Execute(command);
+            sLogs = $@"[{sLogs.Remove(sLogs.Length - 1)}]";
 
-            sLogs = sLogs.Remove(sLogs.Length - 1);
-            sLogs = $@"[ {sLogs} ]";
+            sLogs = sLogs.Replace("\"", "\\\"").Replace("\\\"x00", "\"");
 
-            IEnumerable<GitLogModel> logs;
-            try
-            {
-                logs = JsonConvert.DeserializeObject<IEnumerable<GitLogModel>>(sLogs)!;
-            }
-            catch (JsonReaderException)
-            {
-                sLogs = sLogs.Replace(@"Reapply """, "Reapply \\\"");
-                sLogs = sLogs.Replace(@"Revert """, "Revert \\\"");
-                sLogs = sLogs.Replace(@")""""", ")\\\"\"");
-                logs = JsonConvert.DeserializeObject<IEnumerable<GitLogModel>>(sLogs)!;
-            }
-            return logs;
+            return JsonConvert.DeserializeObject<IEnumerable<GitLogModel>>(sLogs)!;
         }
 
         /// <summary>
