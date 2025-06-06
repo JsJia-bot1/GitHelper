@@ -80,7 +80,7 @@ namespace GitHelper.ViewModels
                 return [];
             }
 
-            IReadOnlyCollection<JiraTicketModel> tickets = await JiraApiClient.GetTicketsByFixVersionAsync(fixVersion);
+            IReadOnlyCollection<JiraTicketModel> tickets = await JiraApiClient.GetAllTicketsByFixVersionAsync(fixVersion);
             return tickets;
         }
 
