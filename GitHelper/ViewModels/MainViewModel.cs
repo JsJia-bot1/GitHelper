@@ -44,7 +44,7 @@ namespace GitHelper.ViewModels
 
         public async Task Initialize(InitialConfigModel configModel)
         {
-            Task<IReadOnlyCollection<JiraTicketModel>> jiraTask = InitializeJira(configModel.FixVersion);
+            Task<IReadOnlyCollection<string>> jiraTask = InitializeJira(configModel.FixVersion, configModel.AdditionalStoryNos);
 
             Task<IEnumerable<GitLogGridModel>> gitTask = InitializeGitRepo(configModel.RepoPath!, configModel.SourceBranch);
 
@@ -52,7 +52,7 @@ namespace GitHelper.ViewModels
 
             IEnumerable<GitLogGridModel> logs = gitTask.Result;
 
-            IReadOnlyCollection<JiraTicketModel> tickets = jiraTask.Result;
+            IReadOnlyCollection<string> tickets = jiraTask.Result;
 
             FilterLogsByJiraNos(logs, tickets);
         }
@@ -73,26 +73,26 @@ namespace GitHelper.ViewModels
             return logs;
         }
 
-        private static async Task<IReadOnlyCollection<JiraTicketModel>> InitializeJira(string? fixVersion)
+        private static async Task<IReadOnlyCollection<string>> InitializeJira(string? fixVersion,
+                                                                              string? additionalStoryNos)
         {
+            var storyNos = additionalStoryNos?.Split(',').Select(x => x.Trim()) ?? Enumerable.Empty<string>();
             if (string.IsNullOrWhiteSpace(fixVersion))
             {
-                return [];
+                return [.. storyNos];
             }
 
             IReadOnlyCollection<JiraTicketModel> tickets = await JiraApiClient.GetAllTicketsByFixVersionAsync(fixVersion);
-            return tickets;
+            return [.. tickets.Select(x => x.Key).Union(storyNos)];
         }
 
-        private void FilterLogsByJiraNos(IEnumerable<GitLogGridModel> logs, IReadOnlyCollection<JiraTicketModel> tickets)
+        private void FilterLogsByJiraNos(IEnumerable<GitLogGridModel> logs, IReadOnlyCollection<string> jiraNos)
         {
-            if (tickets.Count != 0)
+            if (jiraNos.Count != 0)
             {
-                HashSet<string> jiraNos = [.. tickets.Select(x => x.Key)];
-
                 logs = [.. logs.Where(log =>
                 {
-                    string? jiraNo = jiraNos.FirstOrDefault(no => log.GitLog.Description.Contains(no));
+                    string? jiraNo = jiraNos.FirstOrDefault(no => log.GitLog.Description.ContainsJiraNo(no));
 
                     if (jiraNo == null)
                     {

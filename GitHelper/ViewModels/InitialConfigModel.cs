@@ -12,5 +12,9 @@ namespace GitHelper.ViewModels
 
         [ObservableProperty]
         private string _sourceBranch = "dev";
+
+        [ObservableProperty]
+        private string? _additionalStoryNos;
+
     }
 }
