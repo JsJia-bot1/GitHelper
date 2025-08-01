@@ -226,12 +226,14 @@ namespace GitHelper.ViewModels
                                                                      .OrderBy(x => x.GitLog.CommitDate);
             ThrowHelper.ThrowHandledException(!checkedItems.Any(), "No any ready items are checked.");
 
+            int count = 0;
             foreach (var item in checkedItems)
             {
                 await CherryPick(item);
+                count++;
             }
 
-            MessageBox.Show($"Total {checkedItems.Count()} items have been cherry-picked successfully.");
+            MessageBox.Show($"Total {count} items have been cherry-picked successfully.");
         }
 
         private async Task CherryPick(GitLogGridModel log)
