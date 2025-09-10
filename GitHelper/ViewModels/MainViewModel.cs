@@ -52,7 +52,7 @@ namespace GitHelper.ViewModels
 
             IEnumerable<GitLogGridModel> logs = gitTask.Result;
 
-            IReadOnlyCollection<string> tickets = jiraTask.Result;
+            IReadOnlyCollection<string> tickets = [.. jiraTask.Result.Where(r => !string.IsNullOrEmpty(r))];
 
             FilterLogsByJiraNos(logs, tickets);
         }
