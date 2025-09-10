@@ -52,7 +52,7 @@ namespace GitHelper.ViewModels
 
             IEnumerable<GitLogGridModel> logs = gitTask.Result;
 
-            IReadOnlyCollection<string> tickets = [.. jiraTask.Result.Where(r => !string.IsNullOrEmpty(r))];
+            IReadOnlyCollection<string> tickets = jiraTask.Result;
 
             FilterLogsByJiraNos(logs, tickets);
         }
@@ -76,14 +76,14 @@ namespace GitHelper.ViewModels
         private static async Task<IReadOnlyCollection<string>> InitializeJira(string? fixVersion,
                                                                               string? additionalStoryNos)
         {
-            var storyNos = additionalStoryNos?.Split(',').Select(x => x.Trim()) ?? Enumerable.Empty<string>();
+            var storyNos = additionalStoryNos?.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x)) ?? [];
             if (string.IsNullOrWhiteSpace(fixVersion))
             {
                 return [.. storyNos];
             }
 
             IReadOnlyCollection<JiraTicketModel> tickets = await JiraApiClient.GetAllTicketsByFixVersionAsync(fixVersion);
-            return [.. tickets.Select(x => x.Key).Union(storyNos)];
+            return [.. tickets.Select(x => x.Key).Where(x => !string.IsNullOrEmpty(x)).Union(storyNos)];
         }
 
         private void FilterLogsByJiraNos(IEnumerable<GitLogGridModel> logs, IReadOnlyCollection<string> jiraNos)
