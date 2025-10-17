@@ -28,7 +28,7 @@ namespace GitHelper.Jira
                 if (string.IsNullOrWhiteSpace(baseUrl))
                     throw new InvalidOperationException("Missing configuration: JiraHost");
 
-                var url = $"{baseUrl.TrimEnd('/')}/rest/api/3/search?" +
+                var url = $"{baseUrl.TrimEnd('/')}/rest/api/3/search/jql?" +
                           $"jql={jql}&" +
                           $"startAt={startAt}&" +
                           $"maxResults={maxResults}&" +
