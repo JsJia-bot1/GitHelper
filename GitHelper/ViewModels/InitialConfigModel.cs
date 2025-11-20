@@ -16,5 +16,8 @@ namespace GitHelper.ViewModels
         [ObservableProperty]
         private string? _additionalStoryNos;
 
+        [ObservableProperty]
+        private int _logMonths = 24;
+
     }
 }

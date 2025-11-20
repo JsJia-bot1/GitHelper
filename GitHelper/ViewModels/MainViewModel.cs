@@ -46,7 +46,7 @@ namespace GitHelper.ViewModels
         {
             Task<IReadOnlyCollection<string>> jiraTask = InitializeJira(configModel.FixVersion, configModel.AdditionalStoryNos);
 
-            Task<IEnumerable<GitLogGridModel>> gitTask = InitializeGitRepo(configModel.RepoPath!, configModel.SourceBranch);
+            Task<IEnumerable<GitLogGridModel>> gitTask = InitializeGitRepo(configModel.RepoPath!, configModel.SourceBranch, configModel.LogMonths);
 
             await Task.WhenAll(gitTask, jiraTask);
 
@@ -57,14 +57,14 @@ namespace GitHelper.ViewModels
             FilterLogsByJiraNos(logs, tickets);
         }
 
-        private async Task<IEnumerable<GitLogGridModel>> InitializeGitRepo(string repoPath, string sourceBranch)
+        private async Task<IEnumerable<GitLogGridModel>> InitializeGitRepo(string repoPath, string sourceBranch, int logMonths)
         {
             Git = new(repoPath);
             await Git.ValidateRepo();
             await Git.CheckoutOrAutoCreate(sourceBranch, $"origin/{sourceBranch}");
             await Git.Pull(sourceBranch);
 
-            var logs = (await Git.Logs(sourceBranch)).Select(x => new GitLogGridModel(x));
+            var logs = (await Git.Logs(sourceBranch, logMonths)).Select(x => new GitLogGridModel(x));
 
             RepoPath = repoPath;
             CurrentBranch = sourceBranch;
@@ -192,9 +192,9 @@ namespace GitHelper.ViewModels
             ThrowHelper.ThrowHandledException(string.IsNullOrWhiteSpace(TargetBranch), "Please input the target branch.");
             Debug.Assert(TargetBranch != null);
 
-            bool autoCreate = await Git.CheckoutOrAutoCreate(TargetBranch, "origin/main");
+            bool autoCreate = await Git.CheckoutOrAutoCreate(TargetBranch, _configuredSourceBranch);
 
-            MessageBoxHelper.ShowIfTrue(autoCreate, "The branch has been created automatically based on origin/main.");
+            MessageBoxHelper.ShowIfTrue(autoCreate, $"The branch has been created automatically based on {_configuredSourceBranch}.");
 
             CurrentBranch = TargetBranch;
         }

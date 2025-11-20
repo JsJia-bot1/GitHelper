@@ -73,6 +73,27 @@
         </StackPanel>
 
         <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+            <TextBlock Style="{StaticResource LabelStyle}" Text="Please select log lookback period:" />
+            <ComboBox
+                Width="120"
+                Height="25"
+                SelectedValue="{Binding ConfigModel.LogMonths, UpdateSourceTrigger=PropertyChanged}"
+                SelectedValuePath="Content">
+                <ComboBoxItem Content="6" />
+                <ComboBoxItem Content="12" />
+                <ComboBoxItem Content="18" />
+                <ComboBoxItem Content="24" IsSelected="True" />
+                <ComboBoxItem Content="30" />
+                <ComboBoxItem Content="36" />
+            </ComboBox>
+            <TextBlock
+                Margin="5,0,0,0"
+                VerticalAlignment="Center"
+                Style="{StaticResource MessageStyle}"
+                Text="months" />
+        </StackPanel>
+
+        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
             <TextBlock Style="{StaticResource LabelStyle}" Text="*Please open a git directory:" />
             <Button
                 Command="{Binding OpenGitDirectoryCommand}"

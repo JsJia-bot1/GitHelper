@@ -1,8 +1,13 @@
-﻿namespace GitHelper.Jira
+﻿using Newtonsoft.Json;
+
+namespace GitHelper.Jira
 {
     public class JiraTicketsModel
     {
         public int Total { get; init; }
+
+        [JsonProperty("nextPageToken")]
+        public string? NextPageToken { get; set; }
 
         public IEnumerable<JiraTicketModel> Issues { get; init; } = null!;
     }
