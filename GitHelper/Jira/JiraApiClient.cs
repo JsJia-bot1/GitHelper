@@ -16,23 +16,29 @@ namespace GitHelper.Jira
 
             Dictionary<string, JiraTicketModel> ticketMap = [];
 
-            int startAt = 0;
-            const int maxResults = 50;
-            bool hasMore = true;
+            const int maxResults = 100;
+            string? nextPageToken = null;
 
-            while (hasMore)
+            var baseUrl = ConfigurationManager.AppSettings["JiraHost"];
+            if (string.IsNullOrWhiteSpace(baseUrl))
             {
-                var jql = $"fixVersion = '{Uri.EscapeDataString(fixVersion)}' ORDER BY created DESC";
+                throw new InvalidOperationException("Missing configuration: JiraHost");
+            }
 
-                var baseUrl = ConfigurationManager.AppSettings["JiraHost"];
-                if (string.IsNullOrWhiteSpace(baseUrl))
-                    throw new InvalidOperationException("Missing configuration: JiraHost");
+            do
+            {
+                var jql = $"fixVersion = \"{fixVersion}\" ORDER BY created DESC";
+                var queryBuilder = new StringBuilder();
+                queryBuilder.Append("jql=").Append(Uri.EscapeDataString(jql));
+                queryBuilder.Append("&maxResults=").Append(maxResults);
+                queryBuilder.Append("&fields=key,summary,status,fixVersions,subtasks,issuelinks");
 
-                var url = $"{baseUrl.TrimEnd('/')}/rest/api/3/search/jql?" +
-                          $"jql={jql}&" +
-                          $"startAt={startAt}&" +
-                          $"maxResults={maxResults}&" +
-                          "fields=key,summary,status,fixVersions,subtasks,issuelinks";
+                if (!string.IsNullOrEmpty(nextPageToken))
+                {
+                    queryBuilder.Append("&nextPageToken=").Append(Uri.EscapeDataString(nextPageToken));
+                }
+
+                var url = $"{baseUrl.TrimEnd('/')}/rest/api/3/search/jql?{queryBuilder}";
 
                 var response = await client.GetAsync(url);
                 ThrowHelper.ThrowHandledException(response.StatusCode == HttpStatusCode.BadRequest,
@@ -45,7 +51,9 @@ namespace GitHelper.Jira
                 foreach (var issue in result.Issues)
                 {
                     if (!ticketMap.ContainsKey(issue.Key))
+                    {
                         ticketMap[issue.Key] = issue;
+                    }
 
                     // Subtasks
                     if (issue.Fields.Subtasks != null)
@@ -90,9 +98,9 @@ namespace GitHelper.Jira
                     }
                 }
 
-                startAt += maxResults;
-                hasMore = startAt < result.Total;
-            }
+                nextPageToken = result.NextPageToken;
+
+            } while (!string.IsNullOrEmpty(nextPageToken));
 
             return [.. ticketMap.Values];
         }
@@ -107,5 +115,6 @@ namespace GitHelper.Jira
 
             return httpClient;
         }
+
     }
 }

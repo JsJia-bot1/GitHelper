@@ -7,7 +7,6 @@ namespace GitHelper.Git
 {
     public class GitCommandWrapper(string _directory)
     {
-
         private async Task<string> Execute(string command, string? errMessage = null)
         {
             ProcessStartInfo info = new("git", command)
@@ -69,9 +68,9 @@ namespace GitHelper.Git
             return !string.IsNullOrEmpty(res);
         }
 
-        public async Task<IEnumerable<GitLogModel>> Logs(string branchName)
+        public async Task<IEnumerable<GitLogModel>> Logs(string branchName, int months)
         {
-            string command = $@"log {branchName} --since=12.months --date=format-local:""%Y-%m-%d %H:%M:%S"" --pretty=format:""{GitLogModel.Formatter()},""";
+            string command = $@"log {branchName} --since={months}.months --date=format-local:""%Y-%m-%d %H:%M:%S"" --pretty=format:""{GitLogModel.Formatter()},""";
             string sLogs = await Execute(command);
             sLogs = $@"[{sLogs.Remove(sLogs.Length - 1)}]";
 
